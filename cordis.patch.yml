@@ -1,0 +1,9 @@
+# 灵感墙：左栏一面墙，说一句灵感就挂上来。
+#
+# capture: true = 会话里说「我有一个灵感……」时自动总结并挂墙（默认开）。
+#          关掉后仍可在左栏手动记，或让 AI 用 idea_wall_add 工具挂。
+- insert:
+    - id: idea-wall
+      name: '@local/dsh-idea-wall'
+      config:
+        capture: true
