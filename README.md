@@ -32,16 +32,25 @@ DeepSeek Harness 的便签墙插件：左栏一面墙随手贴灵感；<br>
 
 ## 安装 📦
 
-```bash
-# 从本地目录 link 安装（开发/自用）
-dsh plugin --profile web add link:/absolute/path/to/dsh-idea-wall
+**从 npm（推荐）**
 
-# 或让插件管理器指向这个目录
+```bash
+dsh plugin --profile web add @philomelcc/dsh-idea-wall
 ```
 
-装完**刷新页面**即可（首次装新包不用重启 3080；如果你改的是已装包的 `client.js`，重新装一次让 bundle 重建，或重启）。
+**从 GitHub 源码**
 
-> 本包名是 `@local/dsh-idea-wall`（个人 link 用）。要发布到 npm 或给别人装，把 `package.json` 的 `name` 改成你自己的 scope 再发。
+```bash
+dsh plugin --profile web add github:philomelcc/dsh-idea-wall
+```
+
+**本地开发**
+
+```bash
+dsh plugin --profile web add link:/absolute/path/to/dsh-idea-wall
+```
+
+装完**刷新页面**即可（首次装新包不用重启；如果你改的是已装包的 `client.js`，重新装一次让 bundle 重建，或重启 DSH）。
 
 ## 使用 🖊️
 
