@@ -102,6 +102,7 @@ function defineTool(options) {
     name: options.name,
     description: options.description,
     parameters: schema,
+    output: options.output,
     async execute(args, exec) {
       const violations = validateArguments(schema, args)
       if (violations.length > 0) {
@@ -112,6 +113,24 @@ function defineTool(options) {
       return await options.execute(args ?? {}, exec)
     },
   }
+}
+
+/** 四个工具共用的输出：一段给人阅读的文本，结构化数据附在 meta 里。 */
+const TEXT_OUTPUT = {
+  schema: {
+    type: 'object',
+    additionalProperties: true,
+    properties: {
+      text: { type: 'string' },
+      note: { type: 'object', additionalProperties: true },
+      count: { type: 'integer' },
+      notes: { type: 'array', items: { type: 'object', additionalProperties: true } },
+    },
+  },
+  render(_args, value) {
+    const text = typeof value?.text === 'string' ? value.text : JSON.stringify(value ?? null)
+    return [{ type: 'text', text }]
+  },
 }
 
 function toLosslessJson(value) {
@@ -189,6 +208,8 @@ export async function apply(ctx, rawConfig = {}) {
   let store = await loadStore(log)
   let writeChain = Promise.resolve()
   const capturedMessageIds = new Set()
+  // 诊断用：最近几次 pre-step 看到的消息与判定，GET /debug 可查。
+  const debug = { preStepCalls: 0, observations: [] }
 
   /** 所有写操作排队，避免并发写坏 store。 */
   function mutate(operation) {
@@ -246,6 +267,7 @@ export async function apply(ctx, rawConfig = {}) {
         tags: { type: 'array', items: { type: 'string' }, description: '2-4 个短标签，不带 # 号' },
         color: { type: 'string', description: `便签颜色：${COLORS.join(' / ')}` },
       },
+      output: TEXT_OUTPUT,
       async execute(args) {
         const text = String(args.text || '').trim()
         if (!text) throw new Error('text 不能为空')
@@ -272,6 +294,7 @@ export async function apply(ctx, rawConfig = {}) {
         includeArchived: { type: 'boolean', description: '是否包含已归档的便签，默认 false' },
         limit: { type: 'integer', description: '最多返回多少条，默认 50，上限 200' },
       },
+      output: TEXT_OUTPUT,
       async execute(args) {
         const limit = Math.min(Number(args.limit) || 50, 200)
         const notes = searchNotes(store.notes, {
@@ -280,8 +303,15 @@ export async function apply(ctx, rawConfig = {}) {
           includeArchived: Boolean(args.includeArchived),
           limit,
         })
+        const lines = notes.map((note) => {
+          const tagLine = note.tags.length ? ` ${note.tags.map((tag) => `#${tag}`).join(' ')}` : ''
+          const bodyLine = note.body ? `：${note.body.replace(/\n+/g, ' ').slice(0, 120)}` : ''
+          return `- [${note.id}] ${note.title}${note.pinned ? ' [置顶]' : ''}${tagLine}${bodyLine}`
+        })
         return toLosslessJson({
-          text: notes.length === 0 ? '灵感墙上没有符合条件的便签。' : `灵感墙上有 ${notes.length} 条：`,
+          text: notes.length === 0
+            ? '灵感墙上没有符合条件的便签。'
+            : `灵感墙上有 ${notes.length} 条：\n${lines.join('\n')}`,
           count: notes.length,
           notes: notes.map((note) => noteView(note)),
         })
@@ -300,6 +330,7 @@ export async function apply(ctx, rawConfig = {}) {
         pinned: { type: 'boolean', description: '是否置顶' },
         archived: { type: 'boolean', description: '是否归档' },
       },
+      output: TEXT_OUTPUT,
       async execute(args) {
         const id = String(args.id || '')
         const target = store.notes.find((note) => note.id === id)
@@ -326,6 +357,7 @@ export async function apply(ctx, rawConfig = {}) {
       parameters: {
         id: { type: 'string', required: true, description: '便签 id' },
       },
+      output: TEXT_OUTPUT,
       async execute(args) {
         const id = String(args.id || '')
         const exists = store.notes.some((note) => note.id === id)
@@ -431,6 +463,16 @@ export async function apply(ctx, rawConfig = {}) {
         const { idea, error } = await refineForCapture(text)
         return json(res, 200, { ok: true, idea: idea || fallbackIdea(text), refined: Boolean(idea), error })
       }
+      if (req.method === 'GET' && route === '/debug') {
+        // 诊断：看 pre-step 到底看到了什么消息、有没有命中。
+        return json(res, 200, {
+          ok: true,
+          capture: settings.capture,
+          model: (() => { try { return resolveModel(ctx.get('agentDefaultModel'), settings.model) } catch { return null } })(),
+          capturedCount: capturedMessageIds.size,
+          debug,
+        })
+      }
       return json(res, 404, { ok: false, error: 'not found' })
     } catch (error) {
       log(`http ${req.method} ${route}: ${error?.message || error}`)
@@ -470,6 +512,22 @@ export async function apply(ctx, rawConfig = {}) {
         if (capturedMessageIds.has(message.id)) return false
         return true
       })
+      // 诊断：记录入口处的消息形态（只留最近 12 次）。
+      debug.preStepCalls += 1
+      debug.observations.push({
+        at: Date.now(),
+        turn: payload?.turn,
+        step: payload?.step,
+        session: payload?.agent?.sessionId,
+        messages: messages.map((message) => ({
+          role: message?.role,
+          kind: message?.source?.kind,
+          id: String(message?.id ?? '').slice(0, 10),
+          text: String((message?.content ?? []).map((block) => block?.text ?? '').join(' ')).slice(0, 90),
+        })),
+        picked: candidate ? String(candidate.id ?? '').slice(0, 10) : null,
+      })
+      if (debug.observations.length > 12) debug.observations.shift()
       if (!candidate) return decision
 
       const text = (candidate.content ?? [])
