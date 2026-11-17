@@ -13,8 +13,10 @@
     "index.js",
     "client.js",
     "lib",
+    "docs",
     "cordis.patch.yml",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "keywords": [
     "dsh",
@@ -23,8 +25,18 @@
     "plugin",
     "idea",
     "notes",
-    "wall"
+    "wall",
+    "workbench"
   ],
+  "author": "Philomel",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/philomelcc/dsh-idea-wall.git"
+  },
+  "homepage": "https://github.com/philomelcc/dsh-idea-wall#readme",
+  "bugs": {
+    "url": "https://github.com/philomelcc/dsh-idea-wall/issues"
+  },
   "dsh": {
     "bundle": {
       "patch": "./cordis.patch.yml"
