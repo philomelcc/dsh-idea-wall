@@ -1,6 +1,6 @@
 {
   "name": "@philomelcc/dsh-idea-wall",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "灵感墙：左栏一面便签墙，会话里说一句「我有一个灵感」自动总结挂墙。",
   "main": "index.js",

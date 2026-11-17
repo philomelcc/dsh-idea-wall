@@ -4,6 +4,6 @@
 #          关掉后仍可在左栏手动记，或让 AI 用 idea_wall_add 工具挂。
 - insert:
     - id: idea-wall
-      name: '@local/dsh-idea-wall'
+      name: '@philomelcc/dsh-idea-wall'
       config:
         capture: true

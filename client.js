@@ -3,7 +3,7 @@
 // 交互反馈统一走注入的 CSS（hover / active / focus-visible），不靠内联样式；
 // 图标一律 SVG，不用 ★ ☆ ✎ ＋ 这类字符。
 window.__ModuleLoader__.load({
-  id: '@local/dsh-idea-wall',
+  id: '@philomelcc/dsh-idea-wall',
   factory(require) {
     const React = require('react')
     const { useCallback, useEffect, useMemo, useRef, useState } = React
